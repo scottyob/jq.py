@@ -2,7 +2,7 @@ import json
 import threading
 
 from cpython.bytes cimport PyBytes_AsString
-
+from decimal import Decimal
 
 cdef extern from "jv.h":
     ctypedef enum jv_kind:
@@ -35,6 +35,9 @@ cdef extern from "jv.h":
     int jv_object_iter_valid(jv, int)
     jv jv_object_iter_key(jv, int)
     jv jv_object_iter_value(jv, int)
+    jv jv_number_with_literal(const char*);
+    int jv_number_has_literal(jv n);
+    const char* jv_number_get_literal(jv);
 
     cdef struct jv_parser:
         pass
@@ -80,10 +83,11 @@ cdef object _jv_to_python(jv value):
     elif kind == JV_KIND_TRUE:
         python_value = True
     elif kind == JV_KIND_NUMBER:
-        if jv_is_integer(value):
-            python_value = int(jv_number_value(value))
+        decimal_value = Decimal(jv_number_get_literal(value).decode())
+        if decimal_value % 1 == 0:
+            python_value = int(decimal_value)
         else:
-            python_value = float(jv_number_value(value))
+            python_value = float(decimal_value)
     elif kind == JV_KIND_STRING:
         python_value = jv_string_value(value).decode("utf-8")
     elif kind == JV_KIND_ARRAY:

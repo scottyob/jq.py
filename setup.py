@@ -31,8 +31,8 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 
-jq_lib_tarball_path = dependency_path("jq-lib-1.6.tar.gz")
-jq_lib_dir = dependency_path("jq-1.6")
+jq_lib_tarball_path = "master.zip"
+jq_lib_dir = dependency_path("jq-master")
 
 oniguruma_version = "6.9.4"
 oniguruma_lib_tarball_path = dependency_path("onig-{}.tar.gz".format(oniguruma_version))
@@ -61,10 +61,11 @@ class jq_build_ext(build_ext):
 
     def _build_libjq(self):
         self._build_lib(
-            source_url="https://github.com/stedolan/jq/releases/download/jq-1.6/jq-1.6.tar.gz",
+            source_url="https://github.com/stedolan/jq/archive/refs/heads/master.zip",
             tarball_path=jq_lib_tarball_path,
             lib_dir=jq_lib_dir,
             commands=[
+                ["autoreconf", "-fi"],
                 ["./configure", "CFLAGS=-fPIC -pthread", "--disable-maintainer-mode", "--with-oniguruma=" + oniguruma_lib_install_dir],
                 ["make"],
             ])
@@ -96,7 +97,12 @@ class jq_build_ext(build_ext):
 
         if os.path.exists(lib_dir):
             shutil.rmtree(lib_dir)
-        tarfile.open(tarball_path, "r:gz").extractall(dependency_path("."))
+        if tarball_path.endswith(".zip"):
+            from zipfile import ZipFile
+            with ZipFile(tarball_path, 'r') as zipObj:
+                zipObj.extractall(dependency_path("."))
+        else:
+            tarfile.open(tarball_path, "r:gz").extractall(dependency_path("."))
 
 
 jq_extension = Extension(
